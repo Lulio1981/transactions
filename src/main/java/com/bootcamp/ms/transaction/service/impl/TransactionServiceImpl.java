@@ -11,7 +11,6 @@ import com.bootcamp.ms.transaction.util.DateProcess;
 import com.bootcamp.ms.transaction.util.handler.exceptions.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -165,43 +164,6 @@ public class TransactionServiceImpl implements TransactionService {
             return getByIdOriginTransaction(idOriginTransaction).count()
                     .map(c -> c.compareTo(transactionsAllowed) < 0);
         }
-    }
-
-    public Mono<BigDecimal> expiredDebtCreditCardV1(String idOriginTransaction) {
-        return webClient
-                .getWebClient()
-                .post()
-                .uri("personal/active/credit_card")
-                .bodyValue(idOriginTransaction)
-                .retrieve()
-                .bodyToMono(CreditCard.class).map(cc -> {
-                    Calendar today = Calendar.getInstance();
-                    Calendar cutDateStart = Calendar.getInstance();
-                    Calendar cutDateFinish = Calendar.getInstance();
-                    Calendar paymentDate = Calendar.getInstance();
-
-                    cutDateStart.setTime(DateProcess.updateDate(cc.getCutDate(), 0));
-                    paymentDate.setTime(DateProcess.updateDate(cc.getPaymentDate(), 1));
-                    cutDateFinish.setTime(DateProcess.updateDate(cc.getPaymentDate(), 1));
-
-                    BigDecimal exitAcumulator = new BigDecimal(0);
-                    BigDecimal entryAcumulator = new BigDecimal(0);
-
-
-                    repository.findByIdOriginTransactionAndInsertionDateBetween(idOriginTransaction,
-                                    DateProcess.reduceOneMonth(cutDateStart.getTime(), 2),
-                                    DateProcess.reduceOneMonth(paymentDate.getTime(), 1))
-                            .map(tr -> {
-                                if (Short.compare(tr.getOperationType(), Constant.EXIT) == 0 &&
-                                        (tr.getTransactionDate().before(cutDateFinish.getTime()))) {
-                                    exitAcumulator.add(tr.getAmount()).negate();
-                                } else if (Short.compare(tr.getOperationType(), Constant.ENTRY) == 0) {
-                                    entryAcumulator.add(tr.getAmount());
-                                }
-                                return entryAcumulator.add(exitAcumulator);
-                            });
-                    return entryAcumulator;
-                });
     }
 
 
