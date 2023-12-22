@@ -37,7 +37,7 @@ public class MovementServiceImpl implements MovementService {
 
     @Override
     public Mono<Movement> save(Movement movement) {
-        return repository.findById(movement.getId())
+        return repository.findById("1")
                 .map(sa -> {
                     throw new BadRequestException(
                             "ID",
